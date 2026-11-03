@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 const hopByHopHeaders = [
   "connection",
@@ -25,6 +26,7 @@ async function proxy(
   const incoming = new URL(request.url);
   const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8000";
   const pathSuffix = path.map(encodeURIComponent).join("/");
+  const isOAuth = /^auth\/(login|callback|reauth)\//.test(pathSuffix);
   const trailingSlash = incoming.pathname.endsWith("/");
   const target = new URL(
     `${pathSuffix}${trailingSlash ? "/" : ""}${incoming.search}`,
@@ -41,7 +43,7 @@ async function proxy(
     body: hasBody ? request.body : undefined,
     ...(hasBody ? { duplex: "half" as const } : {}),
     cache: "no-store",
-    redirect: "follow",
+    redirect: isOAuth ? "manual" : "follow",
   });
 
   const responseHeaders = new Headers(upstream.headers);
